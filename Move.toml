@@ -8,3 +8,4 @@ Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-fram
 [addresses]
 marketplace =  "0x0"
 sui =  "0000000000000000000000000000000000000002"
+marketplace_owner = "0xba47204619a2505b1f17f87149c229cf7885cd48"

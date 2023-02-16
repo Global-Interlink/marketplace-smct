@@ -3,26 +3,22 @@
 sui client call \
 --function list \
 --module marketplace \
---package 0xddd21733462c813f3bc621e592fdde869f0d7b16 \
+--package 0x6eacc58fc4150c968b8aa7982713715769e72850 \
 --gas-budget 10000 \
 --args \
-    0x2a8d2a8b9920bb242498a7fd4a40ded3d1264df6 \
-    0x2614213a40bbcb6e88439b7055d3e2e70892057a \
+    0x4801437fcc5b3950c76137fa06e21fcc4dfd5b4a \
+    0xdceb1fc316e865cf3796340bce02ad1cd4c0c0c5 \
     \"2000000\" \
 --type-args \
-    0x81f64a0a32a0a413bf74ed915bf6319b5da9acdf::launchpad_nft::NFT
+    0x2::devnet_nft::DevNetNFT
 ```
 
-1. Delist
+2. Delist
 ```
-sui client call \
---function delist \ 
---module marketplace \
---package 0xddd21733462c813f3bc621e592fdde869f0d7b16 \
---gas-budget 10000 \
---args \
-    0x2a8d2a8b9920bb242498a7fd4a40ded3d1264df6 \
-    0x2614213a40bbcb6e88439b7055d3e2e70892057a \
---type-args \
-    0x81f64a0a32a0a413bf74ed915bf6319b5da9acdf::launchpad_nft::NFT
+sui client call --function delist --module marketplace --package 0x6eacc58fc4150c968b8aa7982713715769e72850 --gas-budget 10000 --args 0x4801437fcc5b3950c76137fa06e21fcc4dfd5b4a 0xdceb1fc316e865cf3796340bce02ad1cd4c0c0c5 --type-args 0x2::devnet_nft::DevNetNFT
+```
+
+3. Buy
+```
+sui client call --function buy --module marketplace --package 0x6eacc58fc4150c968b8aa7982713715769e72850 --gas-budget 10000 --args 0x4801437fcc5b3950c76137fa06e21fcc4dfd5b4a 0xdceb1fc316e865cf3796340bce02ad1cd4c0c0c5 '["0x1fbb34d7af8d1a684b735eed241cb8e4450add17"]'  --type-args 0x2::devnet_nft::DevNetNFT
 ```
