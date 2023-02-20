@@ -8,7 +8,10 @@ module marketplace::marketplace {
     use sui::pay;
     use sui::sui::SUI;
     use sui::dynamic_object_field as ofield;
+
+    #[test]
     use sui::test_scenario;
+    #[test]
     use sui::devnet_nft;
 
     // Capabilites
