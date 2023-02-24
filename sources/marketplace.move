@@ -8,10 +8,9 @@ module marketplace::marketplace {
     use sui::pay;
     use sui::sui::SUI;
     use sui::dynamic_object_field as ofield;
+    use sui::math;
 
-    #[test]
     use sui::test_scenario;
-    #[test]
     use sui::devnet_nft;
 
     // Capabilites
@@ -22,7 +21,9 @@ module marketplace::marketplace {
     // ===== Structs =====
     struct Marketplace has key {
         id: UID,
-        wallet: address
+        wallet: address,
+        transaction_fee: u64,
+        transaction_fee_decimal_place: u8,
     }
 
     struct Listing has key, store {
@@ -60,7 +61,9 @@ module marketplace::marketplace {
 
         transfer::share_object(Marketplace {
             id: object::new(ctx),
-            wallet: @marketplace_owner
+            wallet: @marketplace_owner,
+            transaction_fee: 0,
+            transaction_fee_decimal_place: 3
         });
     }
 
@@ -101,15 +104,19 @@ module marketplace::marketplace {
     ): T {
         let Listing {
             id,
-            owner: _,
+            owner,
             price,
         } = ofield::remove(&mut marketplace.id, item_id);
 
         // Change fee
         let sender = tx_context::sender(ctx);
-        let (target, remaining) = merge_and_split(sui_coins, price, ctx);
-        transfer::transfer(remaining, sender);
-        transfer::transfer(target, marketplace.wallet);
+        let fee = price * (marketplace.transaction_fee / math::pow(10, marketplace.transaction_fee_decimal_place)) / 100;
+        let (owner_earnings, buyer_remaining) = merge_and_split(sui_coins, price - fee, ctx);
+
+        let marketplace_earnings = coin::split(&mut buyer_remaining, fee, ctx);
+        transfer::transfer(buyer_remaining, sender);
+        transfer::transfer(owner_earnings, owner);
+        transfer::transfer(marketplace_earnings, marketplace.wallet);
 
         // Delete item
         let item = ofield::remove(&mut id, true);
@@ -126,6 +133,17 @@ module marketplace::marketplace {
         _ctx: &mut TxContext
     ) {
         marketplace.wallet = wallet;
+    }
+
+    public entry fun set_marketplace_transaction_fee (
+        _: &AdminCap,
+        marketplace: &mut Marketplace,
+        transaction_fee: u64,
+        transaction_fee_decimal_place: u8,
+        _ctx: &mut TxContext
+    ) {
+        marketplace.transaction_fee = transaction_fee;
+        marketplace.transaction_fee_decimal_place = transaction_fee_decimal_place;
     }
 
     public entry fun buy<T: key + store> (
@@ -408,6 +426,24 @@ module marketplace::marketplace {
             test_scenario::return_to_sender<AdminCap>(scenario, admin_cap);
         };
 
+        // set mkpl txn fee
+        test_scenario::next_tx(scenario, admin);
+        {
+            // arrange
+            let marketplace_obj = test_scenario::take_shared<Marketplace>(scenario);
+            let admin_cap = test_scenario::take_from_sender<AdminCap>(scenario);
+            set_marketplace_transaction_fee (
+                &admin_cap,
+                &mut marketplace_obj,
+                1000,
+                3,
+                test_scenario::ctx(scenario)
+            );
+            test_scenario::return_shared<Marketplace>(marketplace_obj);
+            test_scenario::return_to_sender<AdminCap>(scenario, admin_cap);
+        };
+
+
         // buy
         test_scenario::next_tx(scenario, buyer);
         {
@@ -444,10 +480,19 @@ module marketplace::marketplace {
         {
             // arrange
             let coin = test_scenario::take_from_sender<Coin<SUI>>(scenario);
-            assert!(coin::value(&coin) == 1_000_000_000, 1);
+            assert!(coin::value(&coin) == 1_000_000_000 * 1 / 100, 1);
             test_scenario::return_to_sender<Coin<SUI>>(scenario, coin);
         };
+
+        // verify balance in seller wallet
+        test_scenario::next_tx(scenario, admin);
+        {
+            // arrange
+            let coin = test_scenario::take_from_sender<Coin<SUI>>(scenario);
+            assert!(coin::value(&coin) == 1_000_000_000 * 99 / 100, 1);
+            test_scenario::return_to_sender<Coin<SUI>>(scenario, coin);
+        };
+
         test_scenario::end(scenario_val);
     }
-
 }
