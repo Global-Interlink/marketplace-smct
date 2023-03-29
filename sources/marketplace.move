@@ -10,7 +10,9 @@ module marketplace::marketplace {
     use sui::dynamic_object_field as ofield;
     use sui::math;
 
+    #[test_only]
     use sui::test_scenario;
+    #[test_only]
     use sui::devnet_nft;
 
     // Capabilites
@@ -74,7 +76,7 @@ module marketplace::marketplace {
     fun merge_and_split<T>(coins: vector<Coin<T>>, amount: u64, ctx: &mut TxContext): (Coin<T>, Coin<T>) {
         let base = vector::pop_back(&mut coins);
         pay::join_vec(&mut base, coins);
-        assert!(coin::value(&base) > amount, E_INSUFFICIENT_FUNDS);
+        assert!(coin::value(&base) >= amount, E_INSUFFICIENT_FUNDS);
         (coin::split(&mut base, amount, ctx), base)
     }
 
@@ -114,9 +116,9 @@ module marketplace::marketplace {
         let (owner_earnings, buyer_remaining) = merge_and_split(sui_coins, price - fee, ctx);
 
         let marketplace_earnings = coin::split(&mut buyer_remaining, fee, ctx);
-        transfer::transfer(buyer_remaining, sender);
-        transfer::transfer(owner_earnings, owner);
-        transfer::transfer(marketplace_earnings, marketplace.wallet);
+        transfer::public_transfer(buyer_remaining, sender);
+        transfer::public_transfer(owner_earnings, owner);
+        transfer::public_transfer(marketplace_earnings, marketplace.wallet);
 
         // Delete item
         let item = ofield::remove(&mut id, true);
@@ -153,7 +155,7 @@ module marketplace::marketplace {
         ctx: &mut TxContext
     ) {
         let item = do_buy<T>(marketplace, item_id, sui_coins, ctx);
-        transfer::transfer(item, tx_context::sender(ctx));
+        transfer::public_transfer(item, tx_context::sender(ctx));
         event::emit(BuyEvent {
             item_id: item_id,
             actor: tx_context::sender(ctx),
@@ -188,7 +190,7 @@ module marketplace::marketplace {
         ctx: &mut TxContext
     ) {
         let item = do_delist<T>(marketplace, item_id, ctx);
-        transfer::transfer(item, tx_context::sender(ctx));
+        transfer::public_transfer(item, tx_context::sender(ctx));
         
         event::emit(DelistEvent {
             item_id: item_id,
@@ -407,7 +409,7 @@ module marketplace::marketplace {
             // arrange
             let ctx = test_scenario::ctx(scenario);
             let coin = coin::mint_for_testing<SUI>(1_300_000_000, ctx);
-            transfer::transfer(coin, buyer);
+            transfer::public_transfer(coin, buyer);
         };
 
         // set wallet
