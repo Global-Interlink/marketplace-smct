@@ -22,9 +22,12 @@ module marketplace::marketplace {
     // ===== Structs =====
     struct Marketplace has key {
         id: UID,
-        wallet: address,
+        wallet_rewards: address,
+        wallet_maintain: address,
         transaction_fee_buy: u64,
         transaction_fee_sell: u64,
+        rewards_percentage: u64,
+        maintain_percentage: u64,
     }
 
     struct Listing has key, store {
@@ -63,9 +66,12 @@ module marketplace::marketplace {
 
         transfer::share_object(Marketplace {
             id: object::new(ctx),
-            wallet: @marketplace_owner,
+            wallet_rewards: @pool_rewards,
+            wallet_maintain: @pool_maintain,
             transaction_fee_buy: 120_000_000,
             transaction_fee_sell: 120_000_000,
+            rewards_percentage: 80,
+            maintain_percentage: 20,
         });
     }
 
@@ -113,11 +119,14 @@ module marketplace::marketplace {
         // Change fee
         let sender = tx_context::sender(ctx);
         let (owner_earnings, buyer_remaining) = merge_and_split(sui_coins, price + marketplace.transaction_fee_buy, ctx);
-
-        let marketplace_earnings = coin::split(&mut owner_earnings, marketplace.transaction_fee_buy, ctx);
+        
+        let coin_fee_rewards = coin::split(&mut owner_earnings, marketplace.transaction_fee_buy * marketplace.rewards_percentage / 100, ctx);
+        let coin_fee_maintain = coin::split(&mut owner_earnings, marketplace.transaction_fee_buy * marketplace.maintain_percentage / 100, ctx);
+        
         transfer::public_transfer(buyer_remaining, sender);
+        transfer::public_transfer(coin_fee_rewards, marketplace.wallet_rewards);
+        transfer::public_transfer(coin_fee_maintain, marketplace.wallet_maintain);
         transfer::public_transfer(owner_earnings, owner);
-        transfer::public_transfer(marketplace_earnings, marketplace.wallet);
 
         // Delete item
         let item = ofield::remove(&mut id, true);
@@ -130,10 +139,12 @@ module marketplace::marketplace {
     public entry fun set_marketplace_wallet (
         _: &AdminCap,
         marketplace: &mut Marketplace,
-        wallet: address,
+        wallet_rewards: address,
+        wallet_maintain: address,
         _ctx: &mut TxContext
     ) {
-        marketplace.wallet = wallet;
+        marketplace.wallet_rewards = wallet_rewards;
+        marketplace.wallet_maintain = wallet_maintain;
     }
 
     public entry fun set_marketplace_transaction_fee_buy (
@@ -143,6 +154,17 @@ module marketplace::marketplace {
         _ctx: &mut TxContext
     ) {
         marketplace.transaction_fee_buy = transaction_fee_buy;
+    }
+
+    public entry fun set_marketplace_percentage (
+        _: &AdminCap,
+        marketplace: &mut Marketplace,
+        rewards_percentage: u64,
+        maintain_percentage: u64,
+        _ctx: &mut TxContext
+    ) {
+        marketplace.rewards_percentage = rewards_percentage;
+        marketplace.maintain_percentage = maintain_percentage;
     }
 
     public entry fun set_marketplace_transaction_fee_sell (
@@ -187,9 +209,10 @@ module marketplace::marketplace {
         ofield::add(&mut marketplace.id, item_id, listing);
 
         let (marketplace_earnings, buyer_remaining) = merge_and_split(sui_coins, marketplace.transaction_fee_sell, ctx);
-
+        let coin_fee_rewards = coin::split(&mut marketplace_earnings, marketplace.transaction_fee_sell * marketplace.rewards_percentage / 100, ctx);
         transfer::public_transfer(buyer_remaining, sender);
-        transfer::public_transfer(marketplace_earnings, marketplace.wallet);
+        transfer::public_transfer(coin_fee_rewards, marketplace.wallet_rewards);
+        transfer::public_transfer(marketplace_earnings, marketplace.wallet_maintain);
 
         event::emit(ListEvent {
             item_id: item_id,
