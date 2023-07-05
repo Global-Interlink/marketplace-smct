@@ -3,9 +3,10 @@ name = "marketplace"
 version = "0.0.1"
 
 [dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir="crates/sui-framework/packages/sui-framework/", rev = "devnet" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
 
 [addresses]
 marketplace =  "0x0"
 sui =  "0x2"
-marketplace_owner = "0x92af61fbc9ab70fbbd0351e6385378d9cf775012299c858cb26126d4ae1f6f4e"
+pool_rewards = "0x606d0751f8ed5a200808c058b8b69ff4c757991a527a20163e1764c9f9291bdc"
+pool_maintain = "0x48b18f250b26f9ff57cbe872a7802725c9413cc6a0ba2dfc3a03ae3a7d5ab405"
